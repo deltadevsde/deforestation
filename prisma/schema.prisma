@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String    @unique
+  purpose               String
+  firstName             String
+  lastName              String
+  email                 String    @unique
+  password              String
+  country               String
+  street                String
+  city                  String
+  provence              String
+  zip                   String
+  pubKey                String    @unique
+  privKey               String    @unique
+  canIssueCertificates  Boolean         @default(false)
+  issuedCertificates    Certificate[] @relation("IssuingCompany") 
+  receivedCertificates  Certificate[] @relation("ReceivingCompany") 
+  sellingTransactions   Transaction[] @relation("SellerTransactions")
+  buyingTransactions    Transaction[] @relation("BuyerTransactions")
+}
+
+model Certificate {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  issuingCompanyId    String    
+  receivingCompanyId  String    
+  issuingCompany      Company   @relation("IssuingCompany", fields: [issuingCompanyId], references: [pubKey])
+  receivingCompany    Company   @relation("ReceivingCompany", fields: [receivingCompanyId], references: [pubKey])
+  validityStart       DateTime?
+  validityEnd         DateTime?
+  amount              Float
+  transactions        Transaction[]
+}
+
+model Transaction {
+  id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  sellerPubKey        String
+  buyerPubKey         String
+  certificateId       String        @db.ObjectId
+  amount              Float
+  seller              Company       @relation("SellerTransactions", fields: [sellerPubKey], references: [pubKey])
+  buyer               Company       @relation("BuyerTransactions", fields: [buyerPubKey], references: [pubKey])
+  certificate         Certificate   @relation(fields: [certificateId], references: [id])
+}
+
