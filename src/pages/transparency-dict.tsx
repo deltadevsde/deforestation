@@ -7,7 +7,7 @@ import TransparencyDashboard from '@/components/TransparencyDashboard';
 export default function TransparencyDict() {
   return (
     <Layout>
-      <Seo templateTitle='SINE Transparency Dictionaries' />
+      <Seo templateTitle='SINE Transparency Dictionary' />
       <TransparencyDashboard />
     </Layout>
   );
