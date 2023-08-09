@@ -44,7 +44,7 @@ export function getFromSessionStorage(key: string): string | null {
   return null;
 }
 
-const API = 'http://localhost:8080';
+const API = 'https://alcesp.network:8080';
 
 export const updateEntry = (
   operation: string,
