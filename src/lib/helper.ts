@@ -44,7 +44,7 @@ export function getFromSessionStorage(key: string): string | null {
   return null;
 }
 
-const API = 'http://127.0.0.1:8080';
+const API = 'http://localhost:8080';
 
 export const updateEntry = (
   operation: string,
@@ -82,14 +82,58 @@ export const updateEntry = (
   });
 };
 
+export const getEpochs = (): Promise<Response> => {
+  return fetch(API + `/get-epochs`);
+};
+
 export const getTransactions = (pubKey: string): Promise<Response> => {
   return fetch(`/api/fetchTransactions?pubKey=${pubKey}`);
 };
 
-export const validateLastEpoch = async (): Promise<Response> => {
+export const validateLastEpoch = async (
+  lastEpoch: string
+): Promise<Response> => {
   return fetch(API + '/validate-epoch', {
     method: 'POST',
-    body: `"2"`,
+    body: `"${lastEpoch}"`,
+  });
+};
+
+export const validateTransaction = async (
+  pubKey: string,
+  value: string,
+  otherKey: string,
+  transactionId?: string,
+  certificateId?: string
+): Promise<Response> => {
+  return fetch('/api/validate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transactionId,
+      certificateId,
+      companyPubKey: pubKey,
+      keyToProve: otherKey,
+      value,
+    }),
+  });
+};
+
+export const proofTransaction = async (
+  pubKey: string,
+  value: string
+): Promise<Response> => {
+  return fetch(API + '/validate-hashchain-proof', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      pub_key: pubKey,
+      value,
+    }),
   });
 };
 

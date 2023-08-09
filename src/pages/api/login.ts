@@ -17,12 +17,6 @@ export default async function loginHandler(
   try {
     const company: Company | null = await prisma.company.findUnique({
       where: { email },
-      include: {
-        issuedCertificates: true,
-        receivedCertificates: true,
-        sellingTransactions: true,
-        buyingTransactions: true,
-      },
     });
 
     if (!company) {

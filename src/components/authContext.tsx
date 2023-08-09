@@ -19,23 +19,19 @@ export interface Company {
   pubKey: string;
   privKey: string;
   canIssueCertificates: boolean;
-  issuedCertificates: Certificate[];
-  receivedCertificates: Certificate[];
-  sellingTransactions: Transaction[];
-  buyingTransactions: Transaction[];
+  transactions: (Transaction | Certificate)[];
 }
 
 export interface Certificate {
   id: string;
   name: string;
   amount: number;
+  area: string;
   issuingCompanyId: string;
   receivingCompanyId: string;
-  issuingCompany: Company;
-  receivingCompany: Company;
   validityStart?: Date;
   validityEnd?: Date;
-  transactions: Transaction[];
+  validated: boolean;
 }
 
 export interface Transaction {
@@ -43,10 +39,9 @@ export interface Transaction {
   sellerPubKey: string;
   buyerPubKey: string;
   certificateId: string;
+  sellingId: string;
   amount: number;
-  seller: Company;
-  buyer: Company;
-  certificate: Certificate;
+  validated: boolean;
 }
 
 // Duck typing
@@ -106,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       }).then((res) => res.json());
       if (response.company) {
-        console.log(response.company);
         setCompany(response.company);
         push('/transparency-dict');
       } else {
@@ -134,7 +128,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return response.json();
         })
         .then((data) => {
-          setTransactions(data);
+          if (data.transactions.length > 0) {
+            const transactions = data.transactions.map((transaction: string) =>
+              JSON.parse(transaction)
+            );
+            setTransactions(transactions);
+          } else {
+            setTransactions(data.transactions);
+          }
         });
     } catch (error) {
       console.error('Fehler beim Laden der Transaktionen:', error);

@@ -9,6 +9,8 @@ type TransactionInputProps = {
   setCertID: (certID: string) => void;
   buyerSeller: string;
   setBuyerSeller: (buyerSeller: string) => void;
+  transactionID: string;
+  setTransactionID: (certID: string) => void;
 };
 
 export default function TransactionInput({
@@ -20,6 +22,8 @@ export default function TransactionInput({
   setCertID,
   buyerSeller,
   setBuyerSeller,
+  transactionID,
+  setTransactionID,
 }: TransactionInputProps) {
   return (
     <div className='mt-2 w-2/3'>
@@ -59,6 +63,26 @@ export default function TransactionInput({
           </label>
         </div>
       </div>
+      {selectedOption === 'buy' ? (
+        <div className='mt-2 sm:col-span-3'>
+          <label
+            htmlFor='transaction-id'
+            className='block text-left text-sm font-medium leading-6 text-gray-900'
+          >
+            Transaction ID
+          </label>
+          <div className='mt-2'>
+            <input
+              type='text'
+              name='transaction-id'
+              id='transaction-id'
+              value={transactionID}
+              onChange={(e) => setTransactionID(e.target.value)}
+              className='block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6'
+            />
+          </div>
+        </div>
+      ) : null}
       <div className='mt-4'>
         <div className='mt-2 sm:col-span-3'>
           <label

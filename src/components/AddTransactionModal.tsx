@@ -10,15 +10,18 @@ import TransactionInput from '@/components/TransactionInput';
 type AddTransactionModalProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  isCertificate?: boolean;
 };
 
 export default function AddTransactionModal({
   open,
   setOpen,
+  isCertificate,
 }: AddTransactionModalProps) {
   const cancelButtonRef = useRef(null);
   const [selectedOption, setSelectedOption] = useState('buy');
   const [amount, setAmount] = useState(0);
+  const [transactionID, setTransactionID] = useState('');
   const [certID, setCertID] = useState('');
   const [buyerSeller, setBuyerSeller] = useState('');
   const [receivingCompany, setReceivingCompany] = useState('');
@@ -31,75 +34,95 @@ export default function AddTransactionModal({
 
   const resetTransactions = () => {
     setSelectedOption('buy');
+    setReceivingCompany('');
+    setArea('');
     setAmount(0);
     setCertID('');
+    setTransactionID('');
     setBuyerSeller('');
   };
 
   const postTransaction = async () => {
     if (!company) return;
-    const buyerSellerJson =
-      selectedOption === 'buy'
-        ? { buyer: buyerSeller }
-        : { seller: buyerSeller };
-    const jsonBody = {
-      type: selectedOption,
-      amount,
-      certID,
-      ...buyerSellerJson,
-    };
-    const jsonBodyString = JSON.stringify(jsonBody);
-    updateEntry(
-      'Add',
-      company.pubKey,
-      company.pubKey,
-      jsonBodyString,
-      company.privKey
-    ).then((res) => {
-      if (res) {
-        // hier muss jetzt der Klartext irgendwo gepeichert werden, vielleicht im State und in MongoDB
-        const endpoint = company.canIssueCertificates
-          ? '/api/addCertificate'
-          : '/api/addTransactions';
-        const body = company.canIssueCertificates
-          ? {
-              name: certID,
-              area,
-              amount,
-              receivingCompanyPubKey: receivingCompany,
-              issuingCompanyPubKey: company.pubKey,
-            }
-          : {
-              sellerPubKey:
-                selectedOption === 'buy' ? buyerSeller : company.pubKey,
-              buyerPubKey:
-                selectedOption === 'sell' ? buyerSeller : company.pubKey,
-              certificateId: certID,
-              amount,
-            };
+    const endpoint = isCertificate
+      ? '/api/addCertificate'
+      : '/api/addTransactions';
+    const body = isCertificate
+      ? {
+          id: company.canIssueCertificates ? '' : certID,
+          name: '',
+          area,
+          amount,
+          receivingCompanyPubKey: company.canIssueCertificates
+            ? receivingCompany
+            : company.pubKey,
+          issuingCompanyPubKey: company.canIssueCertificates
+            ? company.pubKey
+            : receivingCompany,
+          validated: false,
+        }
+      : {
+          issuingCompanyPubKey: company.pubKey,
+          sellerPubKey: selectedOption === 'buy' ? buyerSeller : company.pubKey,
+          buyerPubKey: selectedOption === 'sell' ? buyerSeller : company.pubKey,
+          certificateId: certID,
+          sellingId: transactionID || '',
+          amount,
+          validated: false,
+        };
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+      .then((res) => {
+        return res.json();
+      })
+      .then((res) => {
+        if ('id' in res) {
+          const jsonBodyWithID = {
+            ...body,
+            id: res.id, // add the unique transaction or cert id
+          };
 
-        fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        })
-          .then((res) => {
-            if (res.ok) {
-              console.log('Transaction added to MongoDB');
+          let stringifiedBody = '';
+
+          if (isCertificate) {
+            stringifiedBody = JSON.stringify(jsonBodyWithID);
+          } else {
+            // wenn es sich um einen Verkauf handelt ist die sellingId = der normalen Id und die normale id wird nicht berücksichtigt
+            jsonBodyWithID.sellingId =
+              selectedOption === 'buy' ? transactionID : res.id;
+            // Löschen der issuingCompany-Eigenschaft, die dient nur der Zuordnung im Backend
+            const { id, issuingCompanyPubKey, ...updatedBody } = jsonBodyWithID;
+            stringifiedBody = JSON.stringify(updatedBody);
+          }
+
+          updateEntry(
+            'Add',
+            company.pubKey,
+            company.pubKey,
+            stringifiedBody,
+            company.privKey
+          ).then((res) => {
+            if (res) {
+              // hier muss jetzt der Klartext irgendwo gepeichert werden, vielleicht im State und in MongoDB
               fetchTransactions();
-              resetTransactions();
               setOpen(false);
+              resetTransactions();
             } else {
               console.log('Transaction not added to MongoDB');
             }
-          })
-          .finally(() => {
-            setOpen(false);
           });
-      }
-    });
+        } else {
+          console.log('missing id flag');
+        }
+      })
+      .finally(() => {
+        setOpen(false);
+      });
   };
 
   return (
@@ -148,12 +171,10 @@ export default function AddTransactionModal({
                       as='h3'
                       className='text-base font-semibold leading-6 text-gray-900'
                     >
-                      {company?.canIssueCertificates
-                        ? 'Add certificate'
-                        : 'Add transaction'}
+                      {isCertificate ? 'Add certificate' : 'Add transaction'}
                     </Dialog.Title>
                     <div className='flex w-full justify-center'>
-                      {company?.canIssueCertificates ? (
+                      {isCertificate ? (
                         <CertificateInput
                           amount={amount}
                           setAmount={setAmount}
@@ -161,6 +182,8 @@ export default function AddTransactionModal({
                           setReceivingCompany={setReceivingCompany}
                           area={area}
                           setArea={setArea}
+                          id={certID}
+                          setId={setCertID}
                         />
                       ) : (
                         <TransactionInput
@@ -168,6 +191,8 @@ export default function AddTransactionModal({
                           setAmount={setAmount}
                           certID={certID}
                           setCertID={setCertID}
+                          transactionID={transactionID}
+                          setTransactionID={setTransactionID}
                           buyerSeller={buyerSeller}
                           setBuyerSeller={setBuyerSeller}
                           selectedOption={selectedOption}
@@ -193,9 +218,7 @@ export default function AddTransactionModal({
                       setOpen(false);
                     }}
                   >
-                    {company?.canIssueCertificates
-                      ? 'Add certificate'
-                      : 'Add transaction'}
+                    {isCertificate ? 'Add certificate' : 'Add transaction'}
                   </button>
                   <button
                     type='button'

@@ -16,26 +16,13 @@ export default async function fetchTransactionsHandler(
   try {
     const company = await prisma.company.findUnique({
       where: { pubKey: String(pubKey) },
-      include: {
-        issuedCertificates: true,
-        receivedCertificates: true,
-        sellingTransactions: true,
-        buyingTransactions: true,
-      },
     });
 
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
 
-    const transactions = [
-      ...company.sellingTransactions,
-      ...company.buyingTransactions,
-      ...company.issuedCertificates,
-      ...company.receivedCertificates,
-    ];
-
-    res.status(200).json(transactions);
+    res.status(200).json({ transactions: company.transactions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });

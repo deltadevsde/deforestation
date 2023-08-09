@@ -11,8 +11,15 @@ export default async function addCertificateHandler(
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { name, issuingCompanyPubKey, receivingCompanyPubKey, amount } =
-    req.body;
+  const {
+    id,
+    name,
+    issuingCompanyPubKey,
+    receivingCompanyPubKey,
+    amount,
+    area,
+    validated,
+  } = req.body;
 
   try {
     const issuingCompany: Company | null = await prisma.company.findUnique({
@@ -31,17 +38,51 @@ export default async function addCertificateHandler(
     const expirationDate = new Date();
     expirationDate.setDate(currentDate.getDate() + 56); // Einfach mal auf heute in 8 Wochen = 56 Tage setzen
 
+    const dataBody = {
+      name,
+      issuingCompanyId: issuingCompanyPubKey,
+      receivingCompanyId: receivingCompanyPubKey,
+      validityStart: currentDate,
+      validityEnd: expirationDate,
+      amount,
+      area,
+    };
+
+    if (id) {
+      const company = await prisma.company.update({
+        where: { pubKey: receivingCompanyPubKey },
+        data: {
+          transactions: {
+            push: JSON.stringify({
+              id,
+              ...dataBody,
+              validated: false,
+            }),
+          },
+        },
+      });
+      res.status(200).json(company);
+      return;
+    }
+
     const createdCertificate = await prisma.certificate.create({
-      data: {
-        name,
-        issuingCompany: { connect: { id: issuingCompany.id } },
-        receivingCompany: { connect: { id: receivingCompany.id } },
-        validityStart: currentDate,
-        validityEnd: expirationDate,
-        amount,
-      },
+      data: dataBody,
     });
 
+    const dataBodyWithId = {
+      id: createdCertificate.id,
+      ...dataBody,
+      validated: true,
+    };
+
+    const company = await prisma.company.update({
+      where: { pubKey: issuingCompanyPubKey },
+      data: {
+        transactions: {
+          push: JSON.stringify(dataBodyWithId),
+        },
+      },
+    });
     res.status(201).json(createdCertificate);
   } catch (error) {
     console.error(error);

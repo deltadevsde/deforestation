@@ -48,12 +48,7 @@ export default async function createCompanyHandler(
         zip,
         pubKey: encodeBase64(pubKey),
         privKey: encodeBase64(privKey),
-      },
-      include: {
-        issuedCertificates: true,
-        receivedCertificates: true,
-        sellingTransactions: true,
-        buyingTransactions: true,
+        transactions: [],
       },
     });
 

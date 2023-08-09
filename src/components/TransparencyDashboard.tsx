@@ -38,6 +38,7 @@ import {
   Transaction,
   useAuth,
 } from '@/components/authContext';
+import ValidateTransactionModal from '@/components/ValidateTransactionModal';
 import ValidateTransparencyDictModal from '@/components/ValidateTransparencyDictModal';
 
 /* type Transaction = {
@@ -90,7 +91,13 @@ function classNames(...classes: any) {
 export default function TransparencyDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isCertificateModal, setIsCertificateModal] = useState(false);
   const [validateTDModalOpen, setvalidateTDModalOpen] = useState(false);
+  const [validateTransactionModalOpen, setvalidateTransactionModalOpen] =
+    useState(false);
+  const [transactionToValidate, setTransactionToValidate] = useState<
+    Transaction | Certificate | null
+  >(null);
   const { company, transactions, logout, login, fetchTransactions } = useAuth();
   const { push } = useRouter();
 
@@ -144,7 +151,11 @@ export default function TransparencyDashboard() {
           transaction.buyerPubKey === company?.pubKey) ||
         (!isTransaction(transaction) && !company?.canIssueCertificates)
       ) {
-        return acc + transaction.amount;
+        if (transaction.validated) {
+          return acc + transaction.amount;
+        } else {
+          return acc;
+        }
       }
       return acc - transaction.amount;
     }, 0);
@@ -157,7 +168,8 @@ export default function TransparencyDashboard() {
     return transactions.reduce((acc, transaction) => {
       if (
         !isTransaction(transaction) &&
-        transaction.receivingCompanyId === company?.pubKey
+        transaction.receivingCompanyId === company?.pubKey &&
+        transaction.validated
       ) {
         return acc + 1;
       }
@@ -229,7 +241,7 @@ export default function TransparencyDashboard() {
                   </span>
                   <span>
                     <span className='font-medium text-gray-900'>
-                      {isHovered ? trim(transaction.certificateId) : thirdPart}
+                      {isHovered ? transaction.certificateId : thirdPart}
                     </span>
                   </span>
                 </span>
@@ -299,7 +311,7 @@ export default function TransparencyDashboard() {
   const renderTransactionTable = (
     transaction: Transaction | Certificate
   ): JSX.Element => {
-    /* const isHovered = id === hoveredTransactionId;
+    const isHovered = transaction.id === hoveredTransactionId;
 
     const inputUint8 = decodeUTF8(JSON.stringify(transaction));
     const hashUint8 = hash(inputUint8);
@@ -314,12 +326,20 @@ export default function TransparencyDashboard() {
       firstPartLength,
       firstPartLength + secondPartLength
     );
-    const thirdPart = hashBase64.slice(firstPartLength + secondPartLength); */
+    const thirdPart = hashBase64.slice(firstPartLength + secondPartLength);
 
-    const statusStyle =
-      company?.firstName === 'Luca'
-        ? 'bg-green-100 text-green-800'
-        : 'bg-yellow-100 text-yellow-800';
+    const getStyle = (transaction: Transaction | Certificate): string => {
+      if (
+        company?.canIssueCertificates ||
+        (isTransaction(transaction) &&
+          transaction.sellerPubKey === company?.pubKey) ||
+        transaction.validated
+      ) {
+        return 'bg-green-100 text-green-800';
+      } else {
+        return 'bg-red-100 text-red-800';
+      }
+    };
 
     if (isTransaction(transaction)) {
       return (
@@ -347,8 +367,8 @@ export default function TransparencyDashboard() {
                   />
                 )}
                 <p className='truncate text-gray-500 group-hover:text-gray-900'>
-                  {`from ${trim(transaction.buyerPubKey)} to ${trim(
-                    transaction.sellerPubKey
+                  {`from ${trim(transaction.sellerPubKey)} to ${trim(
+                    transaction.buyerPubKey
                   )}`}
                 </p>
               </a>
@@ -361,14 +381,22 @@ export default function TransparencyDashboard() {
             COF
           </td>
           <td className='hidden whitespace-nowrap px-6 py-4 text-sm text-gray-500 md:block'>
-            <span
+            <button
               className={classNames(
-                statusStyle,
+                getStyle(transaction),
                 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize'
               )}
+              onClick={() => {
+                setTransactionToValidate(transaction);
+                setvalidateTransactionModalOpen(true);
+              }}
             >
-              {company?.firstName === 'Luca' ? 'verified' : 'processing'}
-            </span>
+              {company?.canIssueCertificates ||
+              transaction.sellerPubKey === company?.pubKey ||
+              transaction.validated
+                ? 'verified'
+                : 'not verified'}
+            </button>
           </td>
           <td className='whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500'>
             <span className='font-medium text-gray-900'>
@@ -417,19 +445,48 @@ export default function TransparencyDashboard() {
             COF
           </td>
           <td className='hidden whitespace-nowrap px-6 py-4 text-sm text-gray-500 md:block'>
-            <span
+            <button
+              onClick={async () => {
+                setTransactionToValidate(transaction);
+                setvalidateTransactionModalOpen(true);
+                /* const transactionBody = {
+                  id: transaction.id,
+                  name: '',
+                  area: transaction.area,
+                  amount: transaction.amount,
+                  receivingCompanyPubKey: transaction.receivingCompanyId,
+                  issuingCompanyPubKey: transaction.issuingCompanyId,
+                  validated: false,
+                };
+                validateTransaction(
+                  company!.pubKey,
+                  JSON.stringify(transactionBody),
+                  transaction.issuingCompanyId,
+                  undefined,
+                  transaction.id
+                )
+                  .then((res) => {
+                    return res.json();
+                  })
+                  .then((res) => {
+                    console.log(res);
+                    if ('updatedCompany' in res) {
+                      fetchTransactions();
+                    }
+                  });*/
+              }}
               className={classNames(
-                statusStyle,
+                getStyle(transaction),
                 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize'
               )}
             >
-              {company?.firstName === 'Luca' ? 'verified' : 'processing'}
-            </span>
+              {company?.canIssueCertificates || transaction.validated
+                ? 'verified'
+                : 'not verified'}
+            </button>
           </td>
           <td className='whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500'>
-            <span className='font-medium text-gray-900'>
-              {trim(transaction.id)}
-            </span>
+            <span className='font-medium text-gray-900'>{transaction.id}</span>
           </td>
         </tr>
       );
@@ -452,10 +509,19 @@ export default function TransparencyDashboard() {
       : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1287&q=80';
   return (
     <>
-      <AddTransactionModal open={modalOpen} setOpen={setModalOpen} />
+      <AddTransactionModal
+        open={modalOpen}
+        setOpen={setModalOpen}
+        isCertificate={isCertificateModal}
+      />
       <ValidateTransparencyDictModal
         open={validateTDModalOpen}
         setOpen={setvalidateTDModalOpen}
+      />
+      <ValidateTransactionModal
+        transaction={transactionToValidate}
+        open={validateTransactionModalOpen}
+        setOpen={setvalidateTransactionModalOpen}
       />
       <div className='min-h-full'>
         <Transition.Root show={sidebarOpen} as={Fragment}>
@@ -800,13 +866,26 @@ export default function TransparencyDashboard() {
                     </button> */}
                     <button
                       type='button'
-                      onClick={() => setModalOpen(true)}
+                      onClick={() => {
+                        setIsCertificateModal(true);
+                        setModalOpen(true);
+                      }}
                       className='inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600'
                     >
-                      {company.canIssueCertificates
-                        ? 'Add certificate'
-                        : 'Add transaction'}
+                      Add certificate
                     </button>
+                    {!company.canIssueCertificates ? (
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setIsCertificateModal(false);
+                          setModalOpen(true);
+                        }}
+                        className='inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600'
+                      >
+                        Add transaction
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -823,7 +902,7 @@ export default function TransparencyDashboard() {
                     .map((card) => {
                       if (card.name === 'Account balance') {
                         card.amount =
-                          calculateCurrentAmount().toFixed(2) + 'KG';
+                          calculateCurrentAmount().toFixed(2) + 'COF';
                       }
                       if (card.name === 'Certificate Wallet') {
                         card.amount =
@@ -940,7 +1019,7 @@ export default function TransparencyDashboard() {
                               className='bg-gray-50 px-6 py-3 text-right text-sm font-semibold text-gray-900'
                               scope='col'
                             >
-                              Certificate
+                              Certificate/Transaction ID
                             </th>
                           </tr>
                         </thead>

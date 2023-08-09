@@ -11,7 +11,14 @@ export default async function addTransactionHandler(
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { sellerPubKey, buyerPubKey, certificateId, amount } = req.body;
+  const {
+    issuingCompanyPubKey,
+    sellerPubKey,
+    buyerPubKey,
+    certificateId,
+    sellingId,
+    amount,
+  } = req.body;
 
   try {
     const seller: Company | null = await prisma.company.findUnique({
@@ -30,15 +37,30 @@ export default async function addTransactionHandler(
       return res.status(404).json({ message: 'Not Found' });
     }
 
+    const dataBody = {
+      sellerPubKey,
+      buyerPubKey,
+      certificateId,
+      sellingId,
+      amount,
+    };
+
     const createdTransaction = await prisma.transaction.create({
+      data: dataBody,
+    });
+
+    const dataBodyWithId = {
+      id: createdTransaction.id,
+      ...dataBody,
+      validated: false,
+    };
+
+    const company = await prisma.company.update({
+      where: { pubKey: issuingCompanyPubKey },
       data: {
-        sellerPubKey,
-        buyerPubKey,
-        certificateId,
-        amount,
-        seller: { connect: { pubKey: sellerPubKey } },
-        buyer: { connect: { pubKey: buyerPubKey } },
-        certificate: { connect: { id: certificateId } },
+        transactions: {
+          push: JSON.stringify(dataBodyWithId),
+        },
       },
     });
 
