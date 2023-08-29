@@ -141,7 +141,6 @@ export default function VerifySNARKFeed({ isOpen }: Props) {
         .then((data) => {
           if ('epochs' in data && data.epochs.length > 0) {
             const lastEpoch = data.epochs[data.epochs.length - 1];
-            console.log(lastEpoch);
             setLastEpoch(lastEpoch);
             timeline[1].target = `Epoch ${lastEpoch.id}`;
             timeline[2].target = `0x${trim(

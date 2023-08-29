@@ -43,7 +43,6 @@ export default function SignUp({ setIsSignIn }: SignInProps) {
 
       if (response.ok) {
         console.log('Unternehmen erfolgreich erstellt');
-        console.log(response);
         // Füge hier deine gewünschte Weiterleitung oder Benachrichtigung hinzu
       } else {
         console.error(

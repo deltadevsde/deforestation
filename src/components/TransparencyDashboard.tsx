@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  FingerPrintIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/20/solid';
 import {
@@ -24,6 +25,7 @@ import {
   UserGroupIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import clipboardCopy from 'clipboard-copy';
 import { useRouter } from 'next/router';
 import { Fragment, useEffect, useState } from 'react';
 import { hash } from 'tweetnacl';
@@ -93,6 +95,10 @@ export default function TransparencyDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isCertificateModal, setIsCertificateModal] = useState(false);
   const [validateTDModalOpen, setvalidateTDModalOpen] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [pubKeyCopied, setPubKeyCopied] = useState(false);
+  const [showCIDTooltip, setShowCIDTooltip] = useState('');
+  const [cidCopied, setCIDCopied] = useState(false);
   const [validateTransactionModalOpen, setvalidateTransactionModalOpen] =
     useState(false);
   const [transactionToValidate, setTransactionToValidate] = useState<
@@ -399,7 +405,28 @@ export default function TransparencyDashboard() {
             </button>
           </td>
           <td className='whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500'>
-            <span className='font-medium text-gray-900'>
+            {showCIDTooltip === transaction.certificateId && (
+              <div
+                role='tooltip'
+                className='tooltip absolute -top-10 z-10 inline-block w-[141px] rounded-lg bg-green-700 px-3 py-2 text-center text-sm font-medium text-white opacity-100 shadow-sm transition-opacity duration-300 dark:bg-gray-700'
+              >
+                <p className='w-42'>
+                  {cidCopied ? 'copied' : 'copy to clipboard'}
+                </p>
+              </div>
+            )}
+            <span
+              onMouseEnter={() => setShowCIDTooltip(transaction.certificateId)}
+              onMouseLeave={() => {
+                setCIDCopied(false);
+                setShowCIDTooltip('');
+              }}
+              onClick={() => {
+                setCIDCopied(true);
+                clipboardCopy(transaction.certificateId);
+              }}
+              className='font-medium text-gray-900 hover:cursor-pointer'
+            >
               {transaction.certificateId}
             </span>
           </td>
@@ -485,8 +512,31 @@ export default function TransparencyDashboard() {
                 : 'not verified'}
             </button>
           </td>
-          <td className='whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500'>
-            <span className='font-medium text-gray-900'>{transaction.id}</span>
+          <td
+            onMouseEnter={() => setShowCIDTooltip(transaction.id)}
+            onMouseLeave={() => {
+              setCIDCopied(false);
+              setShowCIDTooltip('');
+            }}
+            onClick={() => {
+              setCIDCopied(true);
+              clipboardCopy(transaction.id);
+            }}
+            className='relative whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500'
+          >
+            {showCIDTooltip === transaction.id && (
+              <div
+                role='tooltip'
+                className='tooltip absolute -top-5 left-14 z-10 inline-block w-[141px] rounded-lg bg-green-700 px-3 py-2 text-center text-sm font-medium text-white opacity-100 shadow-sm transition-opacity duration-300 dark:bg-gray-700'
+              >
+                <p className='w-42'>
+                  {cidCopied ? 'copied' : 'copy to clipboard'}
+                </p>
+              </div>
+            )}
+            <span className='font-medium text-gray-900 hover:cursor-pointer'>
+              {transaction.id}
+            </span>
           </td>
         </tr>
       );
@@ -853,6 +903,41 @@ export default function TransparencyDashboard() {
                             />
                             Verified account
                           </dd>
+                          <div className='relative'>
+                            {showTooltip && (
+                              <div
+                                role='tooltip'
+                                className='tooltip absolute -top-10 z-10 inline-block w-[141px] rounded-lg bg-green-700 px-3 py-2 text-center text-sm font-medium text-white opacity-100 shadow-sm transition-opacity duration-300 dark:bg-gray-700'
+                              >
+                                <p className='w-42'>
+                                  {pubKeyCopied
+                                    ? 'copied'
+                                    : 'copy to clipboard'}
+                                </p>
+                              </div>
+                            )}
+                            <dt className='sr-only'>
+                              Transparency Dictionary Company-ID
+                            </dt>
+                            <dd
+                              onMouseEnter={() => setShowTooltip(true)}
+                              onMouseLeave={() => {
+                                setPubKeyCopied(false);
+                                setShowTooltip(false);
+                              }}
+                              onClick={() => {
+                                setPubKeyCopied(true);
+                                clipboardCopy(company.pubKey);
+                              }}
+                              className='mt-3 flex items-center text-sm font-medium capitalize text-gray-500 hover:cursor-pointer sm:mr-6 sm:mt-0'
+                            >
+                              <FingerPrintIcon
+                                className='mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400'
+                                aria-hidden='true'
+                              />
+                              TD-ID: {trim(company.pubKey)}
+                            </dd>
+                          </div>
                         </dl>
                       </div>
                     </div>

@@ -29,6 +29,8 @@ export default async function validateHandler(
     let proofResult = '';
     await proofTransaction(keyToProve, value)
       .then((result) => {
+        console.log('result');
+        console.log(result);
         if (!result) {
           return res.status(400).json({ message: 'Invalid Transaction' });
         }

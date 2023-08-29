@@ -1,7 +1,10 @@
 import {
   CheckIcon,
+  ExclamationCircleIcon,
+  HandThumbDownIcon,
   HandThumbUpIcon,
   LightBulbIcon,
+  XCircleIcon,
 } from '@heroicons/react/20/solid';
 import { useEffect, useState } from 'react';
 
@@ -94,7 +97,7 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
     },
     {
       id: 6,
-      content: 'Transaction Validated',
+      content: 'Proof ',
       target: '',
       href: '#',
       date: 'Jun 23',
@@ -128,7 +131,6 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
   };
 
   useEffect(() => {
-    console.log('aufgerufen');
     const currentDate = new Date();
     const monthIndex = currentDate.getMonth();
     const monthAbbreviation = months[monthIndex];
@@ -156,7 +158,11 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
         validated: false,
       };
 
-      timeline[1].content = 'SHA256(' + JSON.stringify(transactionBody) + ')';
+      timeline[1].content = `SHA256(id: ${trim(id)}, seller: ${trim(
+        transaction.sellerPubKey
+      )}, buyer: ${trim(transaction.buyerPubKey)}, cert-ID: ${trim(
+        transaction.certificateId
+      )}, amount: ${transaction.amount})`;
 
       validateTransaction(
         company!.pubKey,
@@ -166,11 +172,22 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
         undefined
       )
         .then((res) => {
+          if (!res.ok) {
+            timeline[3].content = 'Failed to prove entry in Hashchain...';
+            timeline[3].icon = XCircleIcon;
+            timeline[3].iconBackground = 'bg-red-500';
+            timeline[4].content = 'Transaction invalid';
+            timeline[4].icon = HandThumbDownIcon;
+            timeline[4].iconBackground = 'bg-red-500';
+            (timeline[5].target = `- can't provide BLS12 coordinates for invalid proof.`),
+              (timeline[5].icon = ExclamationCircleIcon);
+            timeline[5].iconBackground = 'bg-red-500';
+            return;
+          }
           return res.json();
         })
         .then((res) => {
-          console.log(res);
-          if ('updatedCompany' in res) {
+          if (res && 'updatedCompany' in res) {
             timeline[3].content =
               'Prooving ' +
               trim(res.proofResult.public_param) +
@@ -197,7 +214,12 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
         issuingCompanyPubKey: transaction.issuingCompanyId,
         validated: false,
       };
-      timeline[1].content = 'SHA256(' + JSON.stringify(transactionBody) + ')';
+
+      timeline[1].content = `SHA256(id: ${trim(transaction.id)}, issuer: ${trim(
+        transaction.issuingCompanyId
+      )}, receiver: ${trim(transaction.receivingCompanyId)}, area: ${
+        transaction.area
+      }, amount: ${transaction.amount})`;
 
       validateTransaction(
         company!.pubKey,
@@ -207,17 +229,29 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
         transactionBody.id
       )
         .then((res) => {
+          if (!res.ok) {
+            timeline[3].content = 'Failed to prove entry in Hashchain...';
+            timeline[3].icon = XCircleIcon;
+            timeline[3].iconBackground = 'bg-red-500';
+            timeline[4].content = 'Transaction invalid';
+            timeline[4].icon = HandThumbDownIcon;
+            timeline[4].iconBackground = 'bg-red-500';
+            (timeline[5].target = `- can't provide BLS12 coordinates for invalid proof.`),
+              (timeline[5].icon = ExclamationCircleIcon);
+            timeline[5].iconBackground = 'bg-red-500';
+            return;
+          }
           return res.json();
         })
         .then((res) => {
-          if ('updatedCompany' in res) {
+          if (res && 'updatedCompany' in res) {
             timeline[3].content =
               'Prooving ' +
               trim(res.proofResult.public_param) +
               ' as entry in ' +
               trim(transaction.issuingCompanyId) +
               ' Hashchain...';
-            console.log(res.proofResult);
+
             const parsedA = parsePoint(res.proofResult.proof.a);
             const parsedB = parsePoint(res.proofResult.proof.b);
             const parsedC = parsePoint(res.proofResult.proof.c);
@@ -226,8 +260,8 @@ export default function VerifyTransactionModal({ isOpen, transaction }: Props) {
             b: { x: ${trim(parsedB.x)}, y: ${trim(parsedB.y)} },\n
             c: { x: ${trim(parsedC.x)}, y: ${trim(parsedC.y)} }`;
           }
-          console.log(res);
-          if ('updatedCompany' in res) {
+
+          if (res && 'updatedCompany' in res) {
             fetchTransactions();
           }
         });

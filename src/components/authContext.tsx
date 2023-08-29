@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import { createContext, ReactNode, useContext, useState } from 'react';
+import { Oval } from 'react-loader-spinner';
 
 import { getTransactions } from '@/lib/helper';
 
@@ -149,7 +150,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className='-mt-20 flex h-screen w-full items-center justify-center'>
+        <Oval
+          height={80}
+          width={80}
+          color='#166534'
+          secondaryColor='#16a34a'
+          visible={true}
+          ariaLabel='oval-loading'
+          strokeWidth={2}
+          strokeWidthSecondary={2}
+        />
+      </div>
+    );
   }
   return (
     <AuthContext.Provider
